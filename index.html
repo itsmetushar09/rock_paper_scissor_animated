@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Rock Paper Scissors Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .game-title {
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        
+        .choice-btn {
+            transition: transform 0.3s, box-shadow 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .choice-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .choice-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .choice-icon {
+            font-size: 2rem;
+            pointer-events: none;
+        }
+        
+        .result-container {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .score-container {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .bounce {
+            animation: bounce 0.6s ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        
+        .vs-text {
+            text-shadow: 0 0 10px #ff6b6b, 0 0 20px #ff6b6b;
+            animation: glow 1.5s infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #ff6b6b, 0 0 20px #ff6b6b; }
+            to { text-shadow: 0 0 15px #ff6b6b, 0 0 25px #ff6b6b, 0 0 35px #ff6b6b; }
+        }
+        
+        .choice-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start pt-4 md:pt-10 px-4">
+    <div id="canvas-container"></div>
+    
+    <h1 class="game-title text-3xl md:text-5xl mb-6 mt-2 fade-in">Rock Paper Scissors</h1>
+    
+    <div class="score-container w-full max-w-md mb-6 p-3 flex justify-around fade-in">
+        <div class="text-center">
+            <p class="text-sm opacity-70">Player</p>
+            <p class="text-2xl font-bold" id="player-score">0</p>
+        </div>
+        <div class="text-center">
+            <p class="text-sm opacity-70">Draws</p>
+            <p class="text-2xl font-bold" id="draw-score">0</p>
+        </div>
+        <div class="text-center">
+            <p class="text-sm opacity-70">Computer</p>
+            <p class="text-2xl font-bold" id="computer-score">0</p>
+        </div>
+    </div>
+    
+    <div id="battle-area" class="w-full max-w-lg flex justify-between items-center mb-6 fade-in">
+        <div class="text-center" id="player-choice-display">
+            <div class="bg-gray-800 bg-opacity-50 rounded-full h-20 w-20 flex items-center justify-center mb-2 mx-auto">
+                <div id="player-choice-icon" class="text-4xl">?</div>
+            </div>
+            <p class="opacity-70">You</p>
+        </div>
+        
+        <div class="vs-text text-3xl font-bold">VS</div>
+        
+        <div class="text-center" id="computer-choice-display">
+            <div class="bg-gray-800 bg-opacity-50 rounded-full h-20 w-20 flex items-center justify-center mb-2 mx-auto">
+                <div id="computer-choice-icon" class="text-4xl">?</div>
+            </div>
+            <p class="opacity-70">Computer</p>
+        </div>
+    </div>
+    
+    <div class="result-container p-4 mb-8 text-center w-full max-w-md fade-in">
+        <p id="result-text" class="text-xl">Choose your weapon!</p>
+        <p id="subtext" class="text-sm mt-1 opacity-70">First to 5 wins the game</p>
+    </div>
+    
+    <div class="w-full max-w-md flex justify-around mb-6 fade-in">
+        <button class="choice-btn flex flex-col items-center justify-center h-24 w-24 rounded-full focus:outline-none" data-choice="rock">
+            <div class="choice-icon mb-1">✊</div>
+            <span class="choice-label">Rock</span>
+        </button>
+        
+        <button class="choice-btn flex flex-col items-center justify-center h-24 w-24 rounded-full focus:outline-none" data-choice="paper">
+            <div class="choice-icon mb-1">✋</div>
+            <span class="choice-label">Paper</span>
+        </button>
+        
+        <button class="choice-btn flex flex-col items-center justify-center h-24 w-24 rounded-full focus:outline-none" data-choice="scissors">
+            <div class="choice-icon mb-1">✌️</div>
+            <span class="choice-label">Scissors</span>
+        </button>
+    </div>
+    
+    <button id="reset-button" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-full focus:outline-none transition-colors opacity-80 hover:opacity-100 mb-4">
+        Reset Game
+    </button>
+
+    <script>
+        // Three.js Scene Setup
+        const canvasContainer = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        canvasContainer.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 10, 10);
+        scene.add(directionalLight);
+
+        // Particles for background
+        const particleGeometry = new THREE.BufferGeometry();
+        const particleCount = 2000;
+        const posArray = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 50;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8,
+            sizeAttenuation: true
+        });
+
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particleSystem);
+
+        // Create 3D objects for rock, paper, scissors
+        function createRockObject() {
+            const geometry = new THREE.DodecahedronGeometry(1, 0);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x888888, 
+                shininess: 100,
+                flatShading: true
+            });
+            const rock = new THREE.Mesh(geometry, material);
+            return rock;
+        }
+
+        function createPaperObject() {
+            const geometry = new THREE.BoxGeometry(1.5, 1.5, 0.1);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xf0f0f0,
+                shininess: 30,
+                transparent: true,
+                opacity: 0.9
+            });
+            const paper = new THREE.Mesh(geometry, material);
+            // Add subtle bend to paper
+            for (let i = 0; i < geometry.attributes.position.array.length; i += 3) {
+                const x = geometry.attributes.position.array[i];
+                const y = geometry.attributes.position.array[i + 1];
+                geometry.attributes.position.array[i + 2] += Math.sin(x * 2) * 0.1 + Math.sin(y * 2) * 0.1;
+            }
+            geometry.attributes.position.needsUpdate = true;
+            geometry.computeVertexNormals();
+            return paper;
+        }
+
+        function createScissorsObject() {
+            const group = new THREE.Group();
+            
+            // Create two blades
+            const bladeGeometry = new THREE.BoxGeometry(0.2, 1.5, 0.1);
+            const bladeMaterial = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 100 });
+            
+            const blade1 = new THREE.Mesh(bladeGeometry, bladeMaterial);
+            blade1.position.set(-0.2, 0, 0);
+            blade1.rotation.z = Math.PI / 8;
+            
+            const blade2 = new THREE.Mesh(bladeGeometry, bladeMaterial);
+            blade2.position.set(0.2, 0, 0);
+            blade2.rotation.z = -Math.PI / 8;
+            
+            // Create handles
+            const handleGeometry = new THREE.BoxGeometry(0.3, 0.8, 0.15);
+            const handle1Material = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+            const handle2Material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+            
+            const handle1 = new THREE.Mesh(handleGeometry, handle1Material);
+            handle1.position.set(-0.3, -1, 0);
+            blade1.add(handle1);
+            
+            const handle2 = new THREE.Mesh(handleGeometry, handle2Material);
+            handle2.position.set(0.3, -1, 0);
+            blade2.add(handle2);
+            
+            // Add to group
+            group.add(blade1);
+            group.add(blade2);
+            
+            return group;
+        }
+
+        // Create objects but don't add to scene yet
+        const rockObject = createRockObject();
+        const paperObject = createPaperObject();
+        const scissorsObject = createScissorsObject();
+
+        // Position camera
+        camera.position.z = 5;
+
+        // Animation variables for displaying choice objects
+        let playerObject = null;
+        let computerObject = null;
+        let animationInProgress = false;
+
+        // Update function for animation
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate particle system slowly
+            particleSystem.rotation.x += 0.0003;
+            particleSystem.rotation.y += 0.0005;
+            
+            // Rotate the 3D objects if they exist
+            if (playerObject) {
+                playerObject.rotation.y += 0.01;
+            }
+            
+            if (computerObject) {
+                computerObject.rotation.y += 0.01;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Initialize animation
+        animate();
+
+        // Make responsive
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(width, height);
+        });
+
+        // Game variables
+        let scores = {
+            player: 0,
+            computer: 0,
+            draw: 0
+        };
+        
+        const choices = ['rock', 'paper', 'scissors'];
+        const resultText = document.getElementById('result-text');
+        const subText = document.getElementById('subtext');
+        const playerScoreElement = document.getElementById('player-score');
+        const computerScoreElement = document.getElementById('computer-score');
+        const drawScoreElement = document.getElementById('draw-score');
+        const playerChoiceIcon = document.getElementById('player-choice-icon');
+        const computerChoiceIcon = document.getElementById('computer-choice-icon');
+        const choiceButtons = document.querySelectorAll('.choice-btn');
+        const resetButton = document.getElementById('reset-button');
+
+        // Choice icons mapping
+        const choiceIcons = {
+            rock: '✊',
+            paper: '✋',
+            scissors: '✌️'
+        };
+
+        // Display 3D object for player/computer choice
+        function display3DObject(choice, isPlayer) {
+            // Remove any existing objects
+            if (isPlayer && playerObject) {
+                scene.remove(playerObject);
+                playerObject = null;
+            } else if (!isPlayer && computerObject) {
+                scene.remove(computerObject);
+                computerObject = null;
+            }
+            
+            let object;
+            
+            switch (choice) {
+                case 'rock':
+                    object = createRockObject();
+                    break;
+                case 'paper':
+                    object = createPaperObject();
+                    break;
+                case 'scissors':
+                    object = createScissorsObject();
+                    break;
+                default:
+                    return;
+            }
+            
+            if (isPlayer) {
+                object.position.set(-2, 0, 0);
+                playerObject = object;
+            } else {
+                object.position.set(2, 0, 0);
+                computerObject = object;
+            }
+            
+            scene.add(object);
+            
+            // Animate the object appearing
+            object.scale.set(0, 0, 0);
+            animateObjectAppearing(object);
+        }
+
+        // Animate object appearing with scale
+        function animateObjectAppearing(object) {
+            const targetScale = 1;
+            const duration = 500;
+            const startTime = Date.now();
+            
+            function updateScale() {
+                const elapsedTime = Date.now() - startTime;
+                const progress = Math.min(elapsedTime / duration, 1);
+                
+                // Use easeOutBack for a bounce effect
+                const easeOutBack = function(t) {
+                    const c1 = 1.70158;
+                    const c3 = c1 + 1;
+                    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+                };
+                
+                const scale = targetScale * easeOutBack(progress);
+                object.scale.set(scale, scale, scale);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateScale);
+                }
+            }
+            
+            updateScale();
+        }
+
+        // Game logic
+        function getComputerChoice() {
+            return choices[Math.floor(Math.random() * choices.length)];
+        }
+
+        function determineWinner(playerChoice, computerChoice) {
+            if (playerChoice === computerChoice) {
+                return 'draw';
+            } else if (
+                (playerChoice === 'rock' && computerChoice === 'scissors') ||
+                (playerChoice === 'paper' && computerChoice === 'rock') ||
+                (playerChoice === 'scissors' && computerChoice === 'paper')
+            ) {
+                return 'player';
+            } else {
+                return 'computer';
+            }
+        }
+
+        function updateScore(winner) {
+            scores[winner]++;
+            playerScoreElement.textContent = scores.player;
+            computerScoreElement.textContent = scores.computer;
+            drawScoreElement.textContent = scores.draw;
+            
+            // Add animation to the updated score
+            if (winner === 'player') {
+                playerScoreElement.classList.add('bounce');
+                setTimeout(() => playerScoreElement.classList.remove('bounce'), 600);
+            } else if (winner === 'computer') {
+                computerScoreElement.classList.add('bounce');
+                setTimeout(() => computerScoreElement.classList.remove('bounce'), 600);
+            } else {
+                drawScoreElement.classList.add('bounce');
+                setTimeout(() => drawScoreElement.classList.remove('bounce'), 600);
+            }
+        }
+
+        function updateResultText(winner, playerChoice, computerChoice) {
+            resultText.classList.add('fade-in');
+            
+            if (winner === 'draw') {
+                resultText.textContent = "It's a draw!";
+                resultText.style.color = '#ffd700';
+            } else if (winner === 'player') {
+                resultText.textContent = `You win! ${playerChoice} beats ${computerChoice}`;
+                resultText.style.color = '#4ade80';
+            } else {
+                resultText.textContent = `You lose! ${computerChoice} beats ${playerChoice}`;
+                resultText.style.color = '#f87171';
+            }
+            
+            setTimeout(() => {
+                resultText.classList.remove('fade-in');
+            }, 500);
+            
+            // Check for game end
+            if (scores.player >= 5 || scores.computer >= 5) {
+                const finalWinner = scores.player >= 5 ? 'You' : 'Computer';
+                subText.textContent = `Game Over! ${finalWinner} won the game!`;
+                subText.classList.add('pulse');
+                
+                // Disable buttons after game end
+                choiceButtons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50');
+                });
+            }
+        }
+
+        function updateChoiceDisplay(playerChoice, computerChoice) {
+            // Update player choice icon
+            playerChoiceIcon.textContent = choiceIcons[playerChoice];
+            playerChoiceIcon.parentElement.classList.add('bounce');
+            setTimeout(() => playerChoiceIcon.parentElement.classList.remove('bounce'), 600);
+            
+            // Update computer choice icon with a slight delay
+            setTimeout(() => {
+                computerChoiceIcon.textContent = choiceIcons[computerChoice];
+                computerChoiceIcon.parentElement.classList.add('bounce');
+                setTimeout(() => computerChoiceIcon.parentElement.classList.remove('bounce'), 600);
+            }, 300);
+            
+            // Display 3D objects
+            display3DObject(playerChoice, true);
+            setTimeout(() => {
+                display3DObject(computerChoice, false);
+            }, 300);
+        }
+
+        function makeChoice(playerChoice) {
+            if (animationInProgress || scores.player >= 5 || scores.computer >= 5) return;
+            
+            animationInProgress = true;
+            
+            // Highlight the selected button
+            choiceButtons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.choice === playerChoice) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Reset choice display
+            playerChoiceIcon.textContent = '?';
+            computerChoiceIcon.textContent = '?';
+            
+            // Show selection animation
+            resultText.textContent = 'Selecting...';
+            
+            setTimeout(() => {
+                const computerChoice = getComputerChoice();
+                const winner = determineWinner(playerChoice, computerChoice);
+                
+                updateChoiceDisplay(playerChoice, computerChoice);
+                updateScore(winner);
+                updateResultText(winner, playerChoice, computerChoice);
+                
+                setTimeout(() => {
+                    // Reset button highlight
+                    choiceButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    animationInProgress = false;
+                }, 1000);
+            }, 500);
+        }
+
+        function resetGame() {
+            // Reset scores
+            scores = { player: 0, computer: 0, draw: 0 };
+            playerScoreElement.textContent = '0';
+            computerScoreElement.textContent = '0';
+            drawScoreElement.textContent = '0';
+            
+            // Reset display
+            resultText.textContent = 'Choose your weapon!';
+            resultText.style.color = '#fff';
+            subText.textContent = 'First to 5 wins the game';
+            subText.classList.remove('pulse');
+            
+            playerChoiceIcon.textContent = '?';
+            computerChoiceIcon.textContent = '?';
+            
+            // Remove 3D objects
+            if (playerObject) {
+                scene.remove(playerObject);
+                playerObject = null;
+            }
+            
+            if (computerObject) {
+                scene.remove(computerObject);
+                computerObject = null;
+            }
+            
+            // Re-enable buttons
+            choiceButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            });
+            
+            // Add reset animation
+            document.querySelector('.game-title').classList.add('shake');
+            setTimeout(() => {
+                document.querySelector('.game-title').classList.remove('shake');
+            }, 500);
+        }
+
+        // Event listeners
+        choiceButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                makeChoice(button.dataset.choice);
+            });
+        });
+
+        resetButton.addEventListener('click', resetGame);
+
+        // Keyboard support
+        document.addEventListener('keydown', (event) => {
+            if (animationInProgress || scores.player >= 5 || scores.computer >= 5) return;
+            
+            switch(event.key.toLowerCase()) {
+                case 'r':
+                    makeChoice('rock');
+                    break;
+                case 'p':
+                    makeChoice('paper');
+                    break;
+                case 's':
+                    makeChoice('scissors');
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

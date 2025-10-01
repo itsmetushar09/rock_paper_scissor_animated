@@ -1,0 +1,111 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #fff;
+}
+
+#canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.game-title {
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.choice-btn {
+    transition: transform 0.3s, box-shadow 0.3s;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.choice-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.choice-btn.active {
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.choice-icon {
+    font-size: 2rem;
+    pointer-events: none;
+}
+
+.result-container {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.score-container {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.bounce {
+    animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+.shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+.vs-text {
+    text-shadow: 0 0 10px #ff6b6b, 0 0 20px #ff6b6b;
+    animation: glow 1.5s infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 10px #ff6b6b, 0 0 20px #ff6b6b; }
+    to { text-shadow: 0 0 15px #ff6b6b, 0 0 25px #ff6b6b, 0 0 35px #ff6b6b; }
+}
+
+.choice-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
